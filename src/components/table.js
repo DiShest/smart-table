@@ -1,10 +1,19 @@
-import { cloneTemplate } from "../utils/cloneTemplate.js";
+import { cloneTemplate } from "../lib/utils.js";
 
 export function initTable({ before = [], after = [] }) {
   const root = cloneTemplate("table");
 
-  const rowTemplate = root.elements.row;
-  const data = [];
+  before.slice().reverse().forEach((name) => {
+    root[name] = cloneTemplate(name);
+    root.container.prepend(root[name].container);
+  });
+
+  after.forEach((name) => {
+    root[name] = cloneTemplate(name);
+    root.container.append(root[name].container);
+  });
+
+  const rowTemplate = "row";
 
   return {
     ...root,
@@ -21,7 +30,7 @@ export function initTable({ before = [], after = [] }) {
         return row.container;
       });
 
-      root.elements.body.replaceChildren(...rows);
+      root.elements.rows.replaceChildren(...rows);
     },
   };
 }

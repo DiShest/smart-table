@@ -1,32 +1,65 @@
-import { getPages } from "../utils/getPages.js";
+import { getPages } from "../lib/utils.js";
 
 export function initPagination(elements, createPage) {
   const { pages, fromRow, toRow, totalRows } = elements;
 
-  const pageTemplate = pages.firstElementChild;
+  const pageTemplate = pages.firstElementChild.cloneNode(true);
   pages.firstElementChild.remove();
 
-  return (data, state) => {
-    const rowsPerPage = state.rowsPerPage;
-    const pageCount = Math.ceil(data.length / rowsPerPage);
-    let page = state.page;
+  let pageCount = 1;
+  let currentPage = 1;
 
-    const skip = (page - 1) * rowsPerPage;
-    const result = data.slice(skip, skip + rowsPerPage);
+  const applyPagination = (query, state, action) => {
+    const limit = state.rowsPerPage;
 
-    const visiblePages = getPages(page, pageCount);
+    currentPage = state.page || currentPage;
+
+    if (action) {
+      switch (action.name) {
+        case "prev":
+          currentPage = Math.max(1, currentPage - 1);
+          break;
+        case "next":
+          currentPage = Math.min(pageCount, currentPage + 1);
+          break;
+        case "first":
+          currentPage = 1;
+          break;
+        case "last":
+          currentPage = pageCount;
+          break;
+      }
+    }
+
+    return {
+      ...query,
+      limit,
+      page: currentPage,
+    };
+  };
+
+  const updatePagination = (total, state) => {
+    const limit = state.rowsPerPage;
+    pageCount = Math.max(1, Math.ceil(total / limit));
+
+    currentPage = Math.min(currentPage, pageCount);
+
+    const visiblePages = getPages(currentPage, pageCount, 5);
 
     pages.replaceChildren(
       ...visiblePages.map((pageNumber) => {
         const el = pageTemplate.cloneNode(true);
-        return createPage(el, pageNumber, pageNumber === page);
+        return createPage(el, pageNumber, pageNumber === currentPage);
       }),
     );
 
-    fromRow.textContent = (page - 1) * rowsPerPage + 1;
-    toRow.textContent = Math.min(page * rowsPerPage, data.length);
-    totalRows.textContent = data.length;
+    fromRow.textContent = total === 0 ? 0 : (currentPage - 1) * limit + 1;
+    toRow.textContent = Math.min(currentPage * limit, total);
+    totalRows.textContent = total;
+  };
 
-    return result;
+  return {
+    applyPagination,
+    updatePagination,
   };
 }
